@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Observable</title>
+    <script src="./ObservableJS.js"></script>
+    <script>
+        var test = new Observable(12);
+        console.log(test());
+        console.log(test(4));
+        console.log(test());
+        console.log(test.value = 2);
+        console.log(test.value);
+        console.log(test());
+        console.log(test(prev => prev * 10 - 2));
+        console.log(test());
+        console.log(test.value);
+    </script>
+</head>
+
+<body>
+
+</body>
+
+</html>

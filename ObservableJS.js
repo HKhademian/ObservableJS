@@ -1,120 +1,74 @@
 "use strict";
 
+class Callable extends Function {
+    constructor(handler) {
+        super();
+        return new Proxy(this, {
+            apply: (target, thisArg, args) => {
+                return target.invoke.apply(thisArg || target, args)
+            },
+            ...(handler || {}),
+        });
+    }
 
-// todo class extends function
+    invoke() {
+    }
+}
 
-class Observable {
-    $___value;
+class Observable extends Callable {
+    $nodes = {};
+    $value;
     get $isObject() {
-        return typeof this.$___value === 'object';
+        return typeof this.$value === 'object';
     }
     get value() {
         if (this.$isObject) {
-            return { A: 1, B: 2, v: this.$___value };
+            return this.$nodes;
         }
-        return this.$___value;
+        return this.$value;
     }
     set value(v) {
-        const prevValue = this.value;
-        this.$___value = typeof v === 'function' ? v(prevValue) : v;
+        const resp = (this.$value = v);
+        this.clearNodes();
+        this.appendNodes(resp);
+        return resp;
     }
 
-    constructor(value) {
-        const self = this;
-        this.value = value;
-
-        function get_set() {
-            if (arguments.length > 0) {
-                return self.value = arguments[0];
-            }
-            return self.value;
+    invoke() {
+        if (arguments.length > 0) {
+            const input = arguments[0];
+            const prevValue = this.value;
+            const value = typeof input === 'function' ? input(prevValue) : input;
+            return (this.value = value);
         }
-        get_set.__proto__ = self;
+        return this.value;
+    }
 
-        return new Proxy(
-            Function.bind.call(get_set, this), {
+    clearNodes() {
+        this.$nodes = {};
+    }
+    appendNodes(value) {
+        if (!this.$isObject) return;
+        for (let k in value) {
+            this.$nodes[k] = new Observable(value[k], this);
+        }
+    }
+
+    constructor(value, parent) {
+        super({
             get(target, p, receiver) {
-                if (p in self) return self[p];
+                if (p in target) return target[p];
+                if (target.$isObject && p in target.$nodes) return target.$nodes[p];
+                // console.log(target, p, receiver);
             },
             set(target, p, newValue, receiver) {
-                if (p in self) return (self.value = newValue);
-            }
-        });
-    }
-}
-
-
-
-function Observable(value) {
-    var isValue = typeof value != 'object';
-    var nodes = {};
-    function getValue() {
-    }
-    function setValue(newValue) {
-    }
-
-    return function () {
-    }
-}
-
-
-function Observable(value, parent = undefined) {
-    var isValue = typeof value != 'object';
-    var nodes = {};
-
-    function clearNodes() { nodes = {}; }
-    function appendNodes() {
-        if (isValue) return;
-        for (let k in value) {
-            nodes[k] = Observable(value[k]);
-        }
-    }
-
-    function getValue() {
-        if (isValue) {
-            return value;
-        }
-        return nodes;
-    }
-    function setValue(newValue) {
-        var oldValue = getValue();
-        value = typeof newValue === 'function' ? newValue(oldValue) : newValue;
-        isValue = typeof value != 'object';
-        clearNodes();
-        appendNodes();
-    }
-
-    const handler = {
-        has: function (target, key) {
-            if (isValue) {
-                return false;
-            }
-            return key in nodes;
-        },
-        get: function (target, key, receiver) {
-            if (isValue) {
-                // access just by call
-                return undefined;
-            }
-            return nodes[key];
-        },
-        set: function (target, key, newValue, receiver) {
-            if (typeof value != 'object') {
-                if (value[key] != undefined) {
-                    value[key] = value;
-                    return true;
+                if (p in target) return (target.value = newValue);
+                if (target.$isObject) {
+                    return target.$nodes[p] = new Observable(newValue, target);
                 }
-            }
-            nodes[key] = Observable(newValue);
-            return true;
-        },
-    };
-    return new Proxy(function fn() {
-        if (arguments.length > 0) {
-            return setValue(arguments[0]);
-        }
-        return getValue();
-    }, handler);
+                // console.log(target, p, newValue, receiver);
+            },
+        });
+        this.value = value;
+    }
 }
-
-var test = Observable(12);
