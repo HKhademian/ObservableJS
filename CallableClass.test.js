@@ -1,17 +1,24 @@
 function Callable(fn) {
     console.log("Callable::", this);
-    return fn;
+    return function () {
+        console.log("Callable::call:", this);
+        fn.apply(this, arguments);
+    }.bind(this);
 }
 
 class CallableClass extends Callable {
     prop1 = "hallo";
 
     constructor(val1) {
-        // NOTE: super fn param must be arrow fn to preserve this 
-        super((arg1) => {
+        super(function (arg1) {
             console.log("CallableClass::call:", arg1, val1, this);
+            this.test(arg1, val1);
         });
         console.log("CallableClass::ctor:", val1, this);
+    }
+
+    test(arg1, val1) {
+        console.log("CallableClass::test:", arg1, val1, this);
     }
 }
 
